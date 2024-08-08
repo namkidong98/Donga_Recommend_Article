@@ -17,7 +17,7 @@ Based on article data(동아일보), a system that receives the draft of the art
 # Detail Description for each file
 1. crawling.ipynb
     - 동아일보 2024년 기사 링크를 기반으로 크롤링하여 id, title, date, content, link로 이루어진 sqlite DB를 구축
-    - dataset/2024.csv가 있으면 생략 가능, dataset은 <a href="https://huggingface.co/datasets/kidong98/news_article_donga2024">huggingface</a>에서 다운 가능
+    - dataset/2024.csv가 있으면 생략 가능, dataset은 <a href="https://huggingface.co/datasets/kidong98/Donga_Article">huggingface</a>에서 다운 가능
 
 2. preprocessing.ipynb
     - title(기사 제목), content(기사 본문)에 대한 전처리 과정
