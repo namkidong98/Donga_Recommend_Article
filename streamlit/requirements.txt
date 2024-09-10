@@ -1,0 +1,10 @@
+uvicorn
+fastapi
+jinja2
+langchain-milvus
+langchain-upstage
+pymilvus
+pymilvus[model]
+kiwipiepy
+bs4
+streamlit
