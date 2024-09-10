@@ -14,34 +14,49 @@ Based on article data(동아일보), a system that receives the draft of the art
 
 <br>
 
+# Streamlit을 이용한 Demo
+<img width=800 src="https://github.com/user-attachments/assets/cb8afcc2-7ed9-495e-9af6-112b9329e5f8">
+
+1. FastAPI를 이용한 서버 개발(streamlit/main.py) 및 Streamlit을 이용한 데모 페이지 구성(streamlit/app.py)
+2. Azure Cloud로 개설한 Ubuntu 서버에 Docker를 사용하여 Milvus 컨테이너 구동
+3. 연관 기사 검색 옵션으로 '지난 7일', '지난 1달', '지난 1년', '지난 3년'을 추가하여 작성된 기사 원고에 맞는 '연관 기사 검색' 기능 구현
+    - 당시의 화제성 있는 이슈를 다루는 기사의 경우, '지난 7일'처럼 짧은 기간으로 설정하는 것이 검색 및 추천 성능을 높일 것으로 기대
+    - 과거 사건들과의 연관성을 비교(ex. 이태원 참사, 미연준 금리 변동 등)하는 기사의 경우, '지난 1년', '지난 3년'처럼 비교적 긴 기간으로 설정하는 것이 성능 향상에 도움이 될 것으로 기대
+
+<br>
+
+# 시연 영상
+
+<br>
+
 # Detail Description for each file
 1. crawling.ipynb
     - 동아일보 2024년 기사 링크를 기반으로 크롤링하여 id, title, date, content, link로 이루어진 sqlite DB를 구축
-    - dataset/2024.csv가 있으면 생략 가능, dataset은 <a href="https://huggingface.co/datasets/kidong98/Donga_Article">huggingface</a>에서 다운 가능
+    - dataset/2024.csv, dataset/2023.csv가 있으면 생략 가능, dataset은 <a href="https://huggingface.co/datasets/kidong98/Donga_Article">huggingface</a>에서 다운 가능
 
 2. preprocessing.ipynb
     - title(기사 제목), content(기사 본문)에 대한 전처리 과정
     - 한자 변환(<a href="https://blog.naver.com/rlehd201/223525538408">hanja</a> 라이브러리 설치), 특수문자 변환(dataset/2024_norm.csv)
-    - 이후 Dense Embedding의 성능을 높이기 위해 권장되는 토큰 수에 맞추기 위해 content 450자 기준 split(dataset/2024_norm_split.csv)
+    - 이후 Dense Embedding의 성능을 높이기 위해 권장되는 토큰 수에 맞추기 위해 content 450자 기준 split(dataset/*_norm_split.csv)
 
 3. KPF-BERT-NER.ipynb
     - 한국언론진흥재단이 개발한 KPFBERT기반의 <a href="https://github.com/KPF-bigkinds/BIGKINDS-LAB/tree/main/KPF-BERT-NER">NER모델</a>을 이용한 기사본문 NER
       - 기사 데이터를 기반으로 학습한 KPFBERT이기 때문에 해당 Task에 가장 적합한 모델이라 판단
-    - Colab에서 진행하였으며, 3만 개 기사를 450자 split한 7만개 행의 데이터에 대해 총 3~4시간 소요(dataset/2024_norm_split_ner.csv)
+    - Colab에서 진행하였으며, 10만 개 기사(2023~2024.08)를 450자 split한 약 18만개 행의 데이터에 대해 총 3~4시간 소요(dataset/*_norm_split_ner.csv)
 
 4. Kiwi_customizing.ipynb
-    - 길이가 짧아 정보성이 부족한 기사(100~150자, 주로 행사 소개 or 간단한 소식 전달 수준)를 제거(dataset/2024_norm_split_ner_pruning.csv)
-    - NER 결과 빈도 분석으로 유효한 어휘 모음 추출(3만개의 기사에서 추출된 NER 100만개, 중복없이 11만개, 빈도수 10 미만 제거하여 최종적으로 약 2만개)
-    - NER 기반 유효한 어휘 모음(2만개)를 Kiwi 형태소 분석기 사전에 추가하여 Custom 형태소 분석기 제작(model/custom_dict.txt)
+    - 길이가 짧아 정보성이 부족한 기사(100~150자, 주로 행사 소개 or 간단한 소식 전달 수준)를 제거(dataset/20230101_20240807_norm_split_ner_pruning.csv)
+    - NER 결과 빈도 분석으로 유효한 어휘 모음 추출(10만개의 기사에서 추출된 NER 300만개, 중복없이 23만개, 빈도수 8미만 제거하여 최종적으로 약 2.5만개)
+    - NER 기반 유효한 어휘 모음(2.5만개)를 Kiwi 형태소 분석기 사전에 추가하여 Custom 형태소 분석기 제작(model/custom_dict.txt)
 
 5. BM25_model.ipynb
     - 기사 본문(2024_norm_split.csv), Custom Kiwi 형태소 분석기를 각각 Corpus, Analyzer로 지정
-    - Corpus, Analyzer를 이용하여 BM25 모델 생성, 학습(2시간 소요), 저장(model/bm25_model.json)
+    - Corpus, Analyzer를 이용하여 BM25 모델 생성, 학습(4시간 소요), 저장(model/bm25_model_20230101_20240807.json)
 
 6. milvus_create_insert.ipynb
     - Sparse Embedding Model로 5번의 Custom BM25 모델을, Dense Embedding Model로 <a href="https://blog.naver.com/rlehd201/223520177857">Upstage/solar-embedding-1-large</a>를 이용
     - <a href="https://blog.naver.com/rlehd201/223520050648">Docker를 이용하여 Milvus Container를 생성 및 실행</a>하고 'Donga' Collection 생성
-    - 기사 본문(dataset/2024_norm_split_ner_pruning.csv)을 Sparse/Dense Embedding하고 'Donga' Collection에 삽입(3~4시간 소요)
+    - 기사 본문(dataset/20230101_20240807_norm_split_ner_pruning.csv)을 Sparse/Dense Embedding하고 'Donga' Collection에 삽입(3~4시간 소요)
 
 7. vector_search.ipynb
     - 구축한 Milvus Collection('Donga')에 <a href="https://python.langchain.com/v0.2/docs/integrations/retrievers/milvus_hybrid_search/">HybridSearchRetriever</a>로 vector search 수행(연관 기사 검색)
@@ -53,12 +68,3 @@ Based on article data(동아일보), a system that receives the draft of the art
     - DB에 없는 최근 기사의 본문을 ChatGPT 4o를 이용하여 700~900자 분량으로 요약하고 이를 input으로 하여 '연관 기사 검색 및 추천' 기능 테스트
     - Basic 버전(Donga_800)과 Hybridsearch 버전(Donga) 사이의 차이를 비교
     - <img width="700" alt="1" src="https://github.com/user-attachments/assets/9c32b1a7-40af-4bdf-b6e1-df7350188ef4">
-
-<br>
-
-# 향후 발전 방향
-1. FastAPI를 이용한 서버 개발 및 Milvus를 Azure 클라우드에 배포하여 API 형태로 제공
-
-2. 연관 기사 검색 옵션으로 '지난 7일', '지난 1달', '지난 1년', '지난 3년'을 추가하여 작성된 기사 원고에 맞는 '연관 기사 검색' 기능 구현
-    - 당시의 화제성 있는 이슈를 다루는 기사의 경우, '지난 7일'처럼 짧은 기간으로 설정하는 것이 검색 및 추천 성능을 높일 것으로 기대
-    - 과거 사건들과의 연관성을 비교(ex. 이태원 참사, 미연준 금리 변동 등)하는 기사의 경우, '지난 1년', '지난 3년'처럼 비교적 긴 기간으로 설정하는 것이 성능 향상에 도움이 될 것으로 기대
